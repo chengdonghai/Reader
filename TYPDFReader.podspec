@@ -1,5 +1,5 @@
 Pod::Spec.new do |s|
- s.name = 'Reader'
+ s.name = 'TYPDFReader'
  s.version = '2.8.7'
  s.license = 'MIT'
  s.summary = 'The open source PDF file reader/viewer for iOS.'
