@@ -37,6 +37,7 @@
 @required // Delegate protocols
 
 - (void)pagebar:(ReaderMainPagebar *)pagebar gotoPage:(NSInteger)page;
+- (void)pagebarShowMenu:(ReaderMainPagebar *)pagebar;
 
 @end
 

@@ -27,7 +27,7 @@
 #import "ReaderMainPagebar.h"
 #import "ReaderThumbCache.h"
 #import "ReaderDocument.h"
-
+#import "ThumbsViewController.h"
 #import <QuartzCore/QuartzCore.h>
 
 @implementation ReaderMainPagebar
@@ -42,6 +42,8 @@
 
 	UILabel *pageNumberLabel;
 
+    UISlider *pageSlider;
+    
 	UIView *pageNumberView;
 
 	NSTimer *enableTimer;
@@ -62,6 +64,7 @@
 
 #define PAGE_NUMBER_SPACE_SMALL 16.0f
 #define PAGE_NUMBER_SPACE_LARGE 32.0f
+
 
 #define SHADOW_HEIGHT 4.0f
 
@@ -133,7 +136,7 @@
 	{
 		NSInteger pages = [document.pageCount integerValue]; // Total pages
 
-		NSString *format = NSLocalizedString(@"%i of %i", @"format"); // Format
+		NSString *format = NSLocalizedString(@"%i/%i", @"format"); // Format
 
 		NSString *number = [[NSString alloc] initWithFormat:format, (int)page, (int)pages];
 
@@ -141,6 +144,13 @@
 
 		pageNumberLabel.tag = page; // Update the last page number tag
 	}
+}
+
+- (void)updateSliderValue:(NSInteger)page
+{
+    //if (page != pageNumberLabel.tag) {
+        pageSlider.value = page;
+    //}
 }
 
 - (instancetype)initWithFrame:(CGRect)frame document:(ReaderDocument *)object
@@ -171,7 +181,7 @@
 		}
 		else // Follow The Fuglyosity of Flat Fad
 		{
-			self.backgroundColor = [UIColor colorWithWhite:0.94f alpha:0.94f];
+            self.backgroundColor = [UIColor whiteColor];//[UIColor colorWithWhite:0.94f alpha:0.94f];
 
 			CGRect lineRect = self.bounds; lineRect.size.height = 1.0f; lineRect.origin.y -= lineRect.size.height;
 
@@ -183,59 +193,115 @@
 			lineView.backgroundColor = [UIColor colorWithWhite:0.64f alpha:0.94f];
 			[self addSubview:lineView];
 		}
+        CGRect catalogButtonRect = CGRectMake(20, 12, 42, 42);
+        
+        UIButton *_chapterListBtn= [[UIButton alloc] initWithFrame:catalogButtonRect];
+        [_chapterListBtn setImageEdgeInsets:UIEdgeInsetsMake(10, 10, 10, 10)];
+        [_chapterListBtn setImage:[UIImage imageNamed:@"TYReader-day_catalog"] forState:UIControlStateNormal];
+        [_chapterListBtn addTarget:self action:@selector(showChapterListView:) forControlEvents:UIControlEventTouchUpInside];
+        _chapterListBtn.backgroundColor = [UIColor clearColor];
+        [self addSubview:_chapterListBtn];
+        
+		//CGFloat space = (([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) ? PAGE_NUMBER_SPACE_LARGE : PAGE_NUMBER_SPACE_SMALL);
+		//CGFloat numberY = (0.0f - (PAGE_NUMBER_HEIGHT + space)); CGFloat numberX = ((self.bounds.size.width - PAGE_NUMBER_WIDTH) * 0.5f);
+		//CGRect numberRect = CGRectMake(numberX, numberY, PAGE_NUMBER_WIDTH, PAGE_NUMBER_HEIGHT);
 
-		CGFloat space = (([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) ? PAGE_NUMBER_SPACE_LARGE : PAGE_NUMBER_SPACE_SMALL);
-		CGFloat numberY = (0.0f - (PAGE_NUMBER_HEIGHT + space)); CGFloat numberX = ((self.bounds.size.width - PAGE_NUMBER_WIDTH) * 0.5f);
-		CGRect numberRect = CGRectMake(numberX, numberY, PAGE_NUMBER_WIDTH, PAGE_NUMBER_HEIGHT);
+//		pageNumberView = [[UIView alloc] initWithFrame:numberRect]; // Page numbers view
+//
+//		pageNumberView.autoresizesSubviews = NO;
+//		pageNumberView.userInteractionEnabled = NO;
+//		pageNumberView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
+//		pageNumberView.backgroundColor = [UIColor colorWithWhite:0.0f alpha:0.4f];
+//
+//		pageNumberView.layer.shadowOffset = CGSizeMake(0.0f, 0.0f);
+//		pageNumberView.layer.shadowColor = [UIColor colorWithWhite:0.0f alpha:0.6f].CGColor;
+//		pageNumberView.layer.shadowPath = [UIBezierPath bezierPathWithRect:pageNumberView.bounds].CGPath;
+//		pageNumberView.layer.shadowRadius = 2.0f; pageNumberView.layer.shadowOpacity = 1.0f;
+//
+//		CGRect textRect = CGRectInset(pageNumberView.bounds, 4.0f, 2.0f); // Inset the text a bit
+//
+//		pageNumberLabel = [[UILabel alloc] initWithFrame:textRect]; // Page numbers label
+//
+//		pageNumberLabel.autoresizesSubviews = NO;
+//		pageNumberLabel.autoresizingMask = UIViewAutoresizingNone;
+//		pageNumberLabel.textAlignment = NSTextAlignmentCenter;
+//		pageNumberLabel.backgroundColor = [UIColor clearColor];
+//		pageNumberLabel.textColor = [UIColor whiteColor];
+//		pageNumberLabel.font = [UIFont systemFontOfSize:16.0f];
+//		pageNumberLabel.shadowOffset = CGSizeMake(0.0f, 1.0f);
+//		pageNumberLabel.shadowColor = [UIColor blackColor];
+//		pageNumberLabel.adjustsFontSizeToFitWidth = YES;
+//		pageNumberLabel.minimumScaleFactor = 0.75f;
+//
+//		[pageNumberView addSubview:pageNumberLabel]; // Add label view
+//
+//		[self addSubview:pageNumberView]; // Add page numbers display view
 
-		pageNumberView = [[UIView alloc] initWithFrame:numberRect]; // Page numbers view
+//		trackControl = [[ReaderTrackControl alloc] initWithFrame:self.bounds]; // Track control view
+//
+//		[trackControl addTarget:self action:@selector(trackViewTouchDown:) forControlEvents:UIControlEventTouchDown];
+//		[trackControl addTarget:self action:@selector(trackViewValueChanged:) forControlEvents:UIControlEventValueChanged];
+//		[trackControl addTarget:self action:@selector(trackViewTouchUp:) forControlEvents:UIControlEventTouchUpOutside];
+//		[trackControl addTarget:self action:@selector(trackViewTouchUp:) forControlEvents:UIControlEventTouchUpInside];
+//
+//		[self addSubview:trackControl]; // Add the track control and thumbs view
+        
+        CGFloat labelX = CGRectGetMaxX(_chapterListBtn.frame);
+        
+        pageNumberLabel = [[UILabel alloc]initWithFrame:CGRectMake(0, 8, self.frame.size.width, 17)];
+        pageNumberLabel.backgroundColor = [UIColor clearColor];
+        pageNumberLabel.textColor = PDFUIColorFromRGB(0x888888);
+        pageNumberLabel.font = [UIFont systemFontOfSize:15.0f];
+        pageNumberLabel.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:pageNumberLabel];
+        
+        document = object;
+        UISlider * _navSlider = [[UISlider alloc] initWithFrame:CGRectMake(labelX, CGRectGetMaxY(pageNumberLabel.frame) + 3, self.frame.size.width - labelX - 20, 10)];
+        _navSlider.backgroundColor = [UIColor yellowColor];
+        _navSlider.value = [document.pageNumber integerValue];
+        _navSlider.minimumValue = 1;
+        _navSlider.maximumValue = [document.pageCount integerValue];
+        
+        UIEdgeInsets _sliderInsets = UIEdgeInsetsMake(0, 5, 0, 5);
+        [_navSlider setMinimumTrackImage:[[UIImage imageNamed:@"TYReader-day_progress_min"] resizableImageWithCapInsets:_sliderInsets resizingMode:UIImageResizingModeStretch] forState:UIControlStateNormal];
+        [_navSlider setMaximumTrackImage:[[UIImage imageNamed:@"TYReader-day_progress_max"] resizableImageWithCapInsets:_sliderInsets resizingMode:UIImageResizingModeStretch] forState:UIControlStateNormal];
+//        //注意这里要加UIControlStateHightlighted的状态，否则当拖动滑块时滑块将变成原生的控件
+//        [_navSlider setThumbImage:[UIImage imageNamed:@"day_滑块"] forState:UIControlStateHighlighted];
+//        [_navSlider setThumbImage:[UIImage imageNamed:@"day_滑块"] forState:UIControlStateNormal];
+        //滑块拖动时的事件
+     //   [_navSlider setMinimumTrackTintColor:PDFUIColorFromRGB(0x1779f9)];
+       // [_navSlider setMaximumTrackTintColor:PDFUIColorFromRGB(0xA9A9A9)];
+        [_navSlider setThumbImage:[UIImage imageNamed:@"TYReader-day_slider"] forState:UIControlStateNormal];
+        [_navSlider setThumbImage:[UIImage imageNamed:@"TYReader-day_slider"] forState:UIControlStateHighlighted];
+        
+     //   [_navSlider setThumbTintColor:PDFUIColorFromRGB(0x1779f9)];
+        
+        [_navSlider addTarget:self action:@selector(sliderValueChanged:) forControlEvents:UIControlEventValueChanged];
+        _navSlider.backgroundColor = [UIColor clearColor];
+        pageSlider = _navSlider;
+        [self addSubview:_navSlider];
 
-		pageNumberView.autoresizesSubviews = NO;
-		pageNumberView.userInteractionEnabled = NO;
-		pageNumberView.autoresizingMask = UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
-		pageNumberView.backgroundColor = [UIColor colorWithWhite:0.0f alpha:0.4f];
-
-		pageNumberView.layer.shadowOffset = CGSizeMake(0.0f, 0.0f);
-		pageNumberView.layer.shadowColor = [UIColor colorWithWhite:0.0f alpha:0.6f].CGColor;
-		pageNumberView.layer.shadowPath = [UIBezierPath bezierPathWithRect:pageNumberView.bounds].CGPath;
-		pageNumberView.layer.shadowRadius = 2.0f; pageNumberView.layer.shadowOpacity = 1.0f;
-
-		CGRect textRect = CGRectInset(pageNumberView.bounds, 4.0f, 2.0f); // Inset the text a bit
-
-		pageNumberLabel = [[UILabel alloc] initWithFrame:textRect]; // Page numbers label
-
-		pageNumberLabel.autoresizesSubviews = NO;
-		pageNumberLabel.autoresizingMask = UIViewAutoresizingNone;
-		pageNumberLabel.textAlignment = NSTextAlignmentCenter;
-		pageNumberLabel.backgroundColor = [UIColor clearColor];
-		pageNumberLabel.textColor = [UIColor whiteColor];
-		pageNumberLabel.font = [UIFont systemFontOfSize:16.0f];
-		pageNumberLabel.shadowOffset = CGSizeMake(0.0f, 1.0f);
-		pageNumberLabel.shadowColor = [UIColor blackColor];
-		pageNumberLabel.adjustsFontSizeToFitWidth = YES;
-		pageNumberLabel.minimumScaleFactor = 0.75f;
-
-		[pageNumberView addSubview:pageNumberLabel]; // Add label view
-
-		[self addSubview:pageNumberView]; // Add page numbers display view
-
-		trackControl = [[ReaderTrackControl alloc] initWithFrame:self.bounds]; // Track control view
-
-		[trackControl addTarget:self action:@selector(trackViewTouchDown:) forControlEvents:UIControlEventTouchDown];
-		[trackControl addTarget:self action:@selector(trackViewValueChanged:) forControlEvents:UIControlEventValueChanged];
-		[trackControl addTarget:self action:@selector(trackViewTouchUp:) forControlEvents:UIControlEventTouchUpOutside];
-		[trackControl addTarget:self action:@selector(trackViewTouchUp:) forControlEvents:UIControlEventTouchUpInside];
-
-		[self addSubview:trackControl]; // Add the track control and thumbs view
-
-		document = object; // Retain the document object for our use
+        
+        
+		 // Retain the document object for our use
 
 		[self updatePageNumberText:[document.pageNumber integerValue]];
-
+        [self updateSliderValue:[document.pageNumber integerValue]];
 		miniThumbViews = [NSMutableDictionary new]; // Small thumbs
 	}
 
 	return self;
+}
+
+-(void)sliderValueChanged:(UISlider *)sender
+{
+    NSInteger page = sender.value;
+    [self updatePageNumberText:page];
+    
+    if (page != [document.pageNumber integerValue]) // Only if different
+    {
+        [delegate pagebar:self gotoPage:page]; // Go to document page
+    }
 }
 
 - (void)removeFromSuperview
@@ -346,8 +412,8 @@
 	NSInteger page = [document.pageNumber integerValue]; // #
 
 	[self updatePageNumberText:page]; // Update page number text
-
-	[self updatePageThumbView:page]; // Update page thumb view
+    [self updateSliderValue:page];
+	//[self updatePageThumbView:page]; // Update page thumb view
 }
 
 - (void)updatePagebar
@@ -392,6 +458,13 @@
 			completion:NULL
 		];
 	}
+}
+
+-(void)showChapterListView:(id)sender
+{
+    if (self.delegate) {
+        [self.delegate pagebarShowMenu:self];
+    }
 }
 
 #pragma mark - ReaderTrackControl action methods

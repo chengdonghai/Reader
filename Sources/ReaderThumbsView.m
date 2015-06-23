@@ -44,16 +44,17 @@
 	CGSize _thumbSize, _lastViewSize;
 
 	NSUInteger _thumbCount;
-
+     
 	BOOL canUpdate;
 }
 
 #pragma mark - Properties
 
-@synthesize delegate;
+
 
 #pragma mark - ReaderThumbsView instance methods
 
+ 
 - (instancetype)initWithFrame:(CGRect)frame
 {
 	if ((self = [super initWithFrame:frame]))
@@ -68,7 +69,8 @@
 
 		[super setDelegate:self]; // Set the superclass UIScrollView delegate
 
-		thumbCellsQueue = [NSMutableArray new]; thumbCellsVisible = [NSMutableArray new]; // Cell management arrays
+		thumbCellsQueue = [NSMutableArray new];
+        thumbCellsVisible = [NSMutableArray new]; // Cell management arrays
 
 		UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGesture:)];
 		//tapGesture.numberOfTouchesRequired = 1; tapGesture.numberOfTapsRequired = 1; tapGesture.delegate = self;
@@ -107,7 +109,7 @@
 		}
 	}
 }
-
+ 
 - (ReaderThumbView *)dequeueThumbCellWithFrame:(CGRect)frame
 {
 	ReaderThumbView *theCell = nil;
@@ -122,8 +124,8 @@
 	}
 	else // Allocate a brand new thumb cell subclass for our use
 	{
-		theCell = [delegate thumbsView:self thumbCellWithFrame:frame];
-
+		theCell = [self.thumbsDelegate thumbsView:self thumbCellWithFrame:frame];
+        NSLog(@"self.thumbsDelegate:%@",self.thumbsDelegate);
 		//assert([theCell isKindOfClass:[ReaderThumbView class]]);
 
 		theCell.tag = NSIntegerMin; theCell.hidden = YES;
@@ -134,6 +136,10 @@
 	[thumbCellsVisible addObject:theCell]; 
 
 	return theCell;
+}
+-(void)setThumbsDelegate:(id<ReaderThumbsViewDelegate>)thumbsDelegate
+{
+    _thumbsDelegate = thumbsDelegate;
 }
 
 - (NSMutableIndexSet *)visibleIndexSetForContentOffset
@@ -267,7 +273,7 @@
 
 				ReaderThumbView *tvCell = [self dequeueThumbCellWithFrame:thumbRect];
 
-				[delegate thumbsView:self updateThumbCell:tvCell forIndex:index];
+				[_thumbsDelegate thumbsView:self updateThumbCell:tvCell forIndex:index];
 
 				tvCell.tag = index; tvCell.hidden = NO; // Tag and show it
 			}
@@ -288,7 +294,7 @@
 
 - (void)reloadThumbsCenterOnIndex:(NSInteger)index
 {
-	assert(delegate != nil); // Check delegate
+	assert(_thumbsDelegate != nil); // Check delegate
 
 	assert(CGSizeEqualToSize(_thumbSize, CGSizeZero) == false);
 
@@ -305,7 +311,7 @@
 
 	_thumbCount = 0; // Reset the thumb count to zero
 
-	NSUInteger thumbCount = [delegate numberOfThumbsInThumbsView:self];
+	NSUInteger thumbCount = [_thumbsDelegate numberOfThumbsInThumbsView:self];
 
 	[self updateContentSize:thumbCount]; _thumbCount = thumbCount;
 
@@ -340,7 +346,7 @@
 
 - (void)reloadThumbsContentOffset:(CGPoint)newContentOffset
 {
-	assert(delegate != nil); // Check delegate
+	assert(_thumbsDelegate != nil); // Check delegate
 
 	assert(CGSizeEqualToSize(_thumbSize, CGSizeZero) == false);
 
@@ -355,7 +361,7 @@
 
 	_thumbCount = 0; // Reset the thumb count to zero
 
-	NSUInteger thumbCount = [delegate numberOfThumbsInThumbsView:self];
+	NSUInteger thumbCount = [_thumbsDelegate numberOfThumbsInThumbsView:self];
 
 	[self updateContentSize:thumbCount]; _thumbCount = thumbCount;
 
@@ -394,9 +400,9 @@
 	{
 		if (tvCell.tag == index) // Found a visible thumb cell with the index value
 		{
-			if ([delegate respondsToSelector:@selector(thumbsView:refreshThumbCell:forIndex:)])
+			if ([_thumbsDelegate respondsToSelector:@selector(thumbsView:refreshThumbCell:forIndex:)])
 			{
-				[delegate thumbsView:self refreshThumbCell:tvCell forIndex:index]; // Refresh
+				[_thumbsDelegate thumbsView:self refreshThumbCell:tvCell forIndex:index]; // Refresh
 			}
 
 			break;
@@ -408,9 +414,9 @@
 {
 	for (ReaderThumbView *tvCell in thumbCellsVisible) // Enumerate visible cells
 	{
-		if ([delegate respondsToSelector:@selector(thumbsView:refreshThumbCell:forIndex:)])
+		if ([_thumbsDelegate respondsToSelector:@selector(thumbsView:refreshThumbCell:forIndex:)])
 		{
-			[delegate thumbsView:self refreshThumbCell:tvCell forIndex:tvCell.tag]; // Refresh
+			[_thumbsDelegate thumbsView:self refreshThumbCell:tvCell forIndex:tvCell.tag]; // Refresh
 		}
 	}
 }
@@ -433,8 +439,13 @@
 		CGPoint point = [recognizer locationInView:recognizer.view]; // Tap location
 
 		ReaderThumbView *tvCell = [self thumbCellContainingPoint:point]; // Look for cell
-
-		if (tvCell != nil) [delegate thumbsView:self didSelectThumbWithIndex:tvCell.tag];
+        
+        CGRect rect = [self thumbCellFrameForIndex:self.currentIndex];
+        ReaderThumbView *curCell = [self thumbCellContainingPoint:rect.origin];
+        if (tvCell != nil) {
+            [_thumbsDelegate thumbsView:self updateThumbCell:tvCell currentThumbCell:curCell didSelectThumbWithIndex:tvCell.tag];
+            self.currentIndex = tvCell.tag;
+        }
 	}
 }
 
@@ -442,13 +453,13 @@
 {
 	if (recognizer.state == UIGestureRecognizerStateBegan) // Handle the press
 	{
-		if ([delegate respondsToSelector:@selector(thumbsView:didPressThumbWithIndex:)])
+		if ([_thumbsDelegate respondsToSelector:@selector(thumbsView:didPressThumbWithIndex:)])
 		{
 			CGPoint point = [recognizer locationInView:recognizer.view]; // Press location
 
 			ReaderThumbView *tvCell = [self thumbCellContainingPoint:point]; // Look for cell
 
-			if (tvCell != nil) [delegate thumbsView:self didPressThumbWithIndex:tvCell.tag];
+            if (tvCell != nil) [_thumbsDelegate thumbsView:self didPressThumbWithIndex:tvCell.tag];
 		}
 	}
 }
@@ -493,7 +504,7 @@
 
 						ReaderThumbView *tvCell = [self dequeueThumbCellWithFrame:thumbRect];
 
-						[delegate thumbsView:self updateThumbCell:tvCell forIndex:index];
+						[_thumbsDelegate thumbsView:self updateThumbCell:tvCell forIndex:index];
 
 						tvCell.tag = index; tvCell.hidden = NO; // Tag and show it
 					}

@@ -28,10 +28,15 @@
 #import "ReaderThumbRequest.h"
 #import "ReaderThumbCache.h"
 #import "ReaderDocument.h"
+#import "ReaderCustomPresentAnimaton.h"
+#import "ThumbsBookmarkCell.h"
 
 #import <QuartzCore/QuartzCore.h>
+#import "BookmarkShowModel.h"
 
-@interface ThumbsViewController () <ThumbsMainToolbarDelegate, ReaderThumbsViewDelegate>
+@interface ThumbsViewController () <ThumbsMainToolbarDelegate, ReaderThumbsViewDelegate,UITableViewDataSource,UITableViewDelegate,UIViewControllerTransitioningDelegate>
+
+@property(nonatomic,strong) UISegmentedControl *segmentedControl;
 
 @end
 
@@ -50,13 +55,17 @@
 
 	BOOL updateBookmarked;
 	BOOL showBookmarked;
+    
+    UIScrollView *_scrollView;
+    UITableView *_bookmarkTableView;
+    UIImageView *_nobookmarkImageView;
 }
 
 #pragma mark - Constants
 
 #define STATUS_HEIGHT 20.0f
 
-#define TOOLBAR_HEIGHT 44.0f
+#define SEGMENT_CONTROL_HEIGHT 44.0f
 
 #define PAGE_THUMB_SMALL 160
 #define PAGE_THUMB_LARGE 256
@@ -92,66 +101,114 @@
 
 	assert(delegate != nil); assert(document != nil);
 
-	self.view.backgroundColor = [UIColor grayColor]; // Neutral gray
+	self.view.backgroundColor = PDFUIColorFromRGB(0xEDEDEE); // Neutral gray
+    UIView *headerView = [self createSegmentView];
+    
+    [self.view addSubview:headerView];
+    
+    
+    
+    CGRect listRect =  CGRectMake(0, CGRectGetMaxY(headerView.frame) + 25, CGRectGetWidth(self.view.frame), CGRectGetHeight(self.view.frame) - CGRectGetMaxY(headerView.frame));
+    
+    _scrollView = [[UIScrollView alloc]initWithFrame:listRect];
+    _scrollView.pagingEnabled = YES;
+    _scrollView.showsHorizontalScrollIndicator = NO;
+    _scrollView.showsVerticalScrollIndicator = NO;
+    [_scrollView setContentSize:CGSizeMake(_scrollView.frame.size.width * 2, _scrollView.frame.size.height)];
+    
+    [self.view addSubview:_scrollView];
+    
+	theThumbsView = [[ReaderThumbsView alloc] initWithFrame:_scrollView.bounds]; // ReaderThumbsView
+ 	theThumbsView.thumbsDelegate = self; // ReaderThumbsViewDelegate
+    theThumbsView.backgroundColor =[UIColor clearColor];
+    theThumbsView.currentIndex = [document.pageNumber integerValue] - 1;
+	[_scrollView addSubview:theThumbsView];
 
-	CGRect scrollViewRect = self.view.bounds; UIView *fakeStatusBar = nil;
+    [theThumbsView setThumbSize:CGSizeMake(PAGE_THUMB_SMALL, PAGE_THUMB_SMALL)];
+	 
+    CGRect bookmarkRect = CGRectOffset(_scrollView.bounds, listRect.size.width, 0);
+    
+    //书签
+    _bookmarkTableView = [[UITableView alloc] initWithFrame:bookmarkRect style:UITableViewStylePlain];
+    _bookmarkTableView.separatorStyle = UITableViewCellSeparatorStyleSingleLine;
+    _bookmarkTableView.delegate = self;
+    _bookmarkTableView.dataSource = self;
+    _bookmarkTableView.separatorInset = UIEdgeInsetsZero;
+    _bookmarkTableView.tableFooterView = [[UIView alloc] initWithFrame:CGRectZero];
+   
+    _bookmarkTableView.backgroundColor =  PDFUIColorFromRGB(0xededef);
+    
+    _bookmarkTableView.hidden = NO;
+    _bookmarkTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    
+    [_scrollView addSubview:_bookmarkTableView];
+    [_bookmarkTableView reloadData];
+    
+    CGFloat backImageViewWidth = 33;
+    CGFloat backImageViewHeight = 66;
+    
+    UIButton *backButton = [[UIButton alloc]initWithFrame:CGRectMake( CGRectGetWidth(self.view.frame) - backImageViewWidth, (CGRectGetHeight(self.view.frame) - backImageViewHeight)/2.0, backImageViewWidth, backImageViewHeight) ];
+    [backButton setImage:[UIImage imageNamed:@"TYReader-day_backread"] forState:UIControlStateNormal];
+    //[backButton addTarget:self action:@selector(backActionff) forControlEvents:UIControlEventTouchUpInside];
+    [backButton addTarget:self action:@selector(backAction) forControlEvents:UIControlEventTouchUpInside];
+   
+    
+    [self.view addSubview:backButton];
+  
+    _nobookmarkImageView = [[UIImageView alloc] initWithFrame:CGRectMake((self.view.frame.size.width-211)/2, 125, 211, 224)];
+    [_nobookmarkImageView setImage:[UIImage imageNamed:@"TYReader-day_bookmarktip"]];
+    _nobookmarkImageView.hidden = YES;
+    [_bookmarkTableView addSubview:_nobookmarkImageView];
+    
+}
 
-	if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) // iOS 7+
-	{
-		if ([self prefersStatusBarHidden] == NO) // Visible status bar
-		{
-			CGRect statusBarRect = self.view.bounds; // Status bar frame
-			statusBarRect.size.height = STATUS_HEIGHT; // Default status height
-			fakeStatusBar = [[UIView alloc] initWithFrame:statusBarRect]; // UIView
-			fakeStatusBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-			fakeStatusBar.backgroundColor = [UIColor blackColor];
-			fakeStatusBar.contentMode = UIViewContentModeRedraw;
-			fakeStatusBar.userInteractionEnabled = NO;
+-(void)backAction
+{
+    [delegate dismissThumbsViewController:self];
+}
 
-			scrollViewRect.origin.y += STATUS_HEIGHT; scrollViewRect.size.height -= STATUS_HEIGHT;
-		}
-	}
 
-	NSString *toolbarTitle = [document.fileName stringByDeletingPathExtension];
+-(UIView *)createSegmentView
+{
+    UIView *tableHeaderView = [[UIView alloc] initWithFrame:CGRectMake(0, 20, self.view.frame.size.width, SEGMENT_CONTROL_HEIGHT)];
+    
+    CGFloat segmentedControlWidth = 200;
+    CGFloat segmentedControlHeigth = 29;
+    CGFloat segmentedControlX = self.view.frame.size.width /2.0 - segmentedControlWidth / 2.0;
+    CGFloat segmentedControlY = 15;
+    UISegmentedControl *segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"目录",@"书签"]];
+    
+    [segmentedControl setTitleTextAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:16]} forState:UIControlStateNormal];
+    [segmentedControl setTitleTextAttributes:@{NSFontAttributeName:[UIFont systemFontOfSize:16]} forState:UIControlStateHighlighted];
+    segmentedControl.selectedSegmentIndex = 0;
+    segmentedControl.frame = CGRectMake(segmentedControlX, segmentedControlY, segmentedControlWidth, segmentedControlHeigth);
+    [segmentedControl addTarget:self action:@selector(segmentSelected:) forControlEvents:UIControlEventValueChanged];
+    self.segmentedControl = segmentedControl;
+    [tableHeaderView addSubview:segmentedControl];
+    
+    return tableHeaderView;
+}
 
-	CGRect toolbarRect = scrollViewRect; // Toolbar frame
-	toolbarRect.size.height = TOOLBAR_HEIGHT; // Default toolbar height
-	mainToolbar = [[ThumbsMainToolbar alloc] initWithFrame:toolbarRect title:toolbarTitle]; // ThumbsMainToolbar
-	mainToolbar.delegate = self; // ThumbsMainToolbarDelegate
-	[self.view addSubview:mainToolbar];
 
-	if (fakeStatusBar != nil) [self.view addSubview:fakeStatusBar]; // Add status bar background view
+#pragma mark - UIViewControllerTransitioningDelegate
 
-	UIEdgeInsets scrollViewInsets = UIEdgeInsetsZero; // Scroll view toolbar insets
-
-	if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) // iPad
-	{
-		scrollViewRect.origin.y += TOOLBAR_HEIGHT; scrollViewRect.size.height -= TOOLBAR_HEIGHT;
-	}
-	else // Set UIScrollView insets for non-UIUserInterfaceIdiomPad case
-	{
-		scrollViewInsets.top = TOOLBAR_HEIGHT;
-	}
-
-	theThumbsView = [[ReaderThumbsView alloc] initWithFrame:scrollViewRect]; // ReaderThumbsView
-	theThumbsView.contentInset = scrollViewInsets; theThumbsView.scrollIndicatorInsets = scrollViewInsets;
-	theThumbsView.delegate = self; // ReaderThumbsViewDelegate
-	[self.view insertSubview:theThumbsView belowSubview:mainToolbar];
-
-	if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPhone)
-	{
-		CGRect viewRect = self.view.bounds; CGSize viewSize = viewRect.size; // View size
-
-		CGFloat min = ((viewSize.width < viewSize.height) ? viewSize.width : viewSize.height);
-
-		CGFloat thumbSize = ((min > 320.0f) ? floorf(min / 3.0f) : PAGE_THUMB_SMALL);
-
-		[theThumbsView setThumbSize:CGSizeMake(thumbSize, thumbSize)];
-	}
-	else // Set thumb size for large (iPad) devices
-	{
-		[theThumbsView setThumbSize:CGSizeMake(PAGE_THUMB_LARGE, PAGE_THUMB_LARGE)];
-	}
+#pragma mark - Action
+-(void)backActionff
+{
+    [UIView animateWithDuration:0.35 animations:^{
+        self.view.frame =  CGRectOffset(self.view.frame, -CGRectGetWidth(self.view.frame), 0);
+    } completion:^(BOOL finished) {
+        [self.view removeFromSuperview];
+    }];
+}
+-(void)segmentSelected:(id)sender
+{
+    UISegmentedControl *segmentedControl = sender;
+    NSInteger selectedIndex = segmentedControl.selectedSegmentIndex;
+    [_scrollView setContentOffset:CGPointMake(selectedIndex * CGRectGetWidth(_scrollView.frame), 0) animated:YES];
+    if (selectedIndex == 1) {
+        [self reloadBookmarkTable];
+    }
 }
 
 - (void)viewWillAppear:(BOOL)animated
@@ -174,17 +231,6 @@
 - (void)viewDidDisappear:(BOOL)animated
 {
 	[super viewDidDisappear:animated];
-}
-
-- (void)viewDidUnload
-{
-#ifdef DEBUG
-	NSLog(@"%s", __FUNCTION__);
-#endif
-
-	mainToolbar = nil; theThumbsView = nil;
-
-	[super viewDidUnload];
 }
 
 - (BOOL)prefersStatusBarHidden
@@ -225,7 +271,100 @@
 
 	[super didReceiveMemoryWarning];
 }
+#pragma mark - UITableViewDelegate
+-(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+     NSNumber *page = [[((BookmarkShowModel *)[bookmarked objectAtIndex:indexPath.section]).bookmarkArray objectAtIndex:indexPath.row] objectForKey:@"page"];
+    [delegate thumbsViewController:self gotoPage:page.integerValue]; // Show the selected page
+    [delegate dismissThumbsViewController:self]; // Dismiss thumbs display
+}
+#pragma mark - UITableViewDatasource
+-(NSInteger)numberOfSectionsInTableView:(UITableView *)tableView
+{
+    NSInteger count = [bookmarked count];
+    _nobookmarkImageView.hidden = (count != 0) || _segmentedControl.selectedSegmentIndex == 0;
+    return count;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return 50.0f;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section
+{
+    return 40.0f;
+}
+-(NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    return [((BookmarkShowModel *)[bookmarked objectAtIndex:section]).bookmarkArray count];
+}
 
+
+-(UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    ThumbsBookmarkCell *tableViewCell = [tableView dequeueReusableCellWithIdentifier:@"PDF_BOOKMARK_CELL"];
+    if (tableViewCell == nil) {
+        tableViewCell = [[ThumbsBookmarkCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"PDF_BOOKMARK_CELL"];
+    }
+ 
+    NSNumber *page = [[((BookmarkShowModel *)[bookmarked objectAtIndex:indexPath.section]).bookmarkArray objectAtIndex:indexPath.row] objectForKey:@"page"];
+    tableViewCell.textLabel.text = [NSString stringWithFormat:@"第%@页",page];
+    NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+    [formatter setDateFormat:@"HH:mm"];
+    tableViewCell.detailTextLabel.text = [formatter stringFromDate:[[((BookmarkShowModel *)[bookmarked objectAtIndex:indexPath.section]).bookmarkArray objectAtIndex:indexPath.row] objectForKey:@"date"]];
+    tableViewCell.backgroundColor = [UIColor clearColor];
+    return tableViewCell;
+}
+
+-(UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section
+{
+    UIView *hederView = [[UIView alloc]init];
+    
+    UILabel *dateTimeLabel = [[UILabel alloc]initWithFrame:hederView.bounds];
+    dateTimeLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    dateTimeLabel.textAlignment = NSTextAlignmentCenter;
+    dateTimeLabel.font = [UIFont systemFontOfSize:11];
+    dateTimeLabel.textColor = PDFUIColorFromRGB(0x808080);
+    dateTimeLabel.backgroundColor = [UIColor clearColor];
+    dateTimeLabel.text = ((BookmarkShowModel *)[bookmarked objectAtIndex:section]).addBookmarkDate;
+    [hederView addSubview:dateTimeLabel];
+    UIImageView *line = [[UIImageView alloc]initWithFrame:CGRectMake(25, 39, CGRectGetWidth(tableView.frame)-50, 1)];
+    line.image = [UIImage imageNamed:@"TYReader-day_line"];
+    line.tag = 121;
+    
+    [hederView addSubview:line];
+    return hederView;
+}
+
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return YES;
+}
+
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    if (tableView == _bookmarkTableView) {
+        if (editingStyle == UITableViewCellEditingStyleDelete) {
+            BookmarkShowModel *bookmarkInOneDay = [bookmarked objectAtIndex:indexPath.section];
+            NSDictionary *bookmarkInfo = [bookmarkInOneDay.bookmarkArray objectAtIndex:indexPath.row];
+            [bookmarkInOneDay.bookmarkArray removeObjectAtIndex:indexPath.row];
+            // Delete the row from the data source.
+            
+            [_bookmarkTableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+            if (bookmarkInOneDay.bookmarkArray.count == 0) {
+                
+                [bookmarked removeObject:bookmarkInOneDay];
+                [_bookmarkTableView deleteSections:[NSIndexSet indexSetWithIndex:indexPath.section] withRowAnimation:UITableViewRowAnimationFade];
+            }
+            
+            [delegate thumbsViewController:self deleteBookmark:[bookmarkInfo objectForKey:@"page"] ];
+        }
+    }
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForDeleteConfirmationButtonForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    return @"删除";
+}
 #pragma mark - ThumbsMainToolbarDelegate methods
 
 - (void)tappedInToolbar:(ThumbsMainToolbar *)toolbar showControl:(UISegmentedControl *)control
@@ -270,6 +409,36 @@
 	}
 }
 
+-(void) reloadBookmarkTable
+{
+    [bookmarked removeAllObjects]; // Empty the list first
+    
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    //设定时间格式,这里可以设置成自己需要的格式
+    [dateFormatter setDateFormat:@"yyyy-MM-dd"];
+    [document.bookmarkDicts enumerateKeysAndObjectsUsingBlock:^(NSNumber *page, NSDate *bookmarkDate, BOOL *stop) {
+        __block  BOOL isCreateDate = NO;
+        NSString *currentDateStr = [dateFormatter stringFromDate:bookmarkDate];
+        //如果已经创建该日期的书签数组
+        [bookmarked enumerateObjectsUsingBlock:^(BookmarkShowModel* model, NSUInteger idx, BOOL *stop) {
+            if ([model.addBookmarkDate isEqualToString:currentDateStr]) {
+                [model.bookmarkArray addObject:@{@"page":page,@"date":bookmarkDate}];
+                isCreateDate = YES;
+            }
+        }];
+        //该日期的书签数组没创建
+        if (!isCreateDate) {
+            BookmarkShowModel *model = [[BookmarkShowModel alloc]init];
+            model.bookmarkArray = [[NSMutableArray alloc]init];
+            [model.bookmarkArray addObject:@{@"page":page,@"date":bookmarkDate}];
+            model.addBookmarkDate = currentDateStr;
+            [bookmarked addObject:model];
+        }
+    }];
+   
+    [_bookmarkTableView reloadData];
+}
+
 - (void)tappedInToolbar:(ThumbsMainToolbar *)toolbar doneButton:(UIButton *)button
 {
 	[delegate dismissThumbsViewController:self]; // Dismiss thumbs display
@@ -294,9 +463,10 @@
 	NSInteger page = (showBookmarked ? [[bookmarked objectAtIndex:index] integerValue] : (index + 1));
 
 	[thumbCell showText:[[NSString alloc] initWithFormat:@"%i", (int)page]]; // Page number place holder
-
+    
 	[thumbCell showBookmark:[document.bookmarks containsIndex:page]]; // Show bookmarked status
 
+    [thumbCell showBackView:[document.pageNumber integerValue] == index + 1];
 	NSURL *fileURL = document.fileURL; NSString *guid = document.guid; NSString *phrase = document.password; // Document info
 
 	ReaderThumbRequest *thumbRequest = [ReaderThumbRequest newForView:thumbCell fileURL:fileURL password:phrase guid:guid page:page size:size];
@@ -309,16 +479,17 @@
 - (void)thumbsView:(ReaderThumbsView *)thumbsView refreshThumbCell:(ThumbsPageThumb *)thumbCell forIndex:(NSInteger)index
 {
 	NSInteger page = (showBookmarked ? [[bookmarked objectAtIndex:index] integerValue] : (index + 1));
-
 	[thumbCell showBookmark:[document.bookmarks containsIndex:page]]; // Show bookmarked status
+    [thumbCell showBackView:[document.pageNumber integerValue] == index + 1];
 }
 
-- (void)thumbsView:(ReaderThumbsView *)thumbsView didSelectThumbWithIndex:(NSInteger)index
+- (void)thumbsView:(ReaderThumbsView *)thumbsView updateThumbCell:thumbCell currentThumbCell:currCell didSelectThumbWithIndex:(NSInteger)index
 {
 	NSInteger page = (showBookmarked ? [[bookmarked objectAtIndex:index] integerValue] : (index + 1));
 
 	[delegate thumbsViewController:self gotoPage:page]; // Show the selected page
-
+    [currCell showBackView:NO];
+    [thumbCell showBackView:[document.pageNumber integerValue] == index + 1];
 	[delegate dismissThumbsViewController:self]; // Dismiss thumbs display
 }
 
@@ -401,20 +572,21 @@
 		textLabel.backgroundColor = [UIColor whiteColor];
 
 		[self insertSubview:textLabel belowSubview:imageView];
-
-		backView = [[UIView alloc] initWithFrame:defaultRect];
+        CGRect backViewRect = CGRectInset(defaultRect, -2, -2);
+		backView = [[UIView alloc] initWithFrame:backViewRect];
 
 		backView.autoresizesSubviews = NO;
 		backView.userInteractionEnabled = NO;
 		backView.contentMode = UIViewContentModeRedraw;
 		backView.autoresizingMask = UIViewAutoresizingNone;
-		backView.backgroundColor = [UIColor whiteColor];
+		backView.backgroundColor = [UIColor clearColor];
 
 #if (READER_SHOW_SHADOWS == TRUE) // Option
-
-		backView.layer.shadowOffset = CGSizeMake(0.0f, 1.0f);
-		backView.layer.shadowRadius = 3.0f; backView.layer.shadowOpacity = 1.0f;
-		backView.layer.shadowPath = [UIBezierPath bezierPathWithRect:backView.bounds].CGPath;
+        backView.layer.borderWidth = 1;
+        backView.layer.borderColor = PDFUIColorFromRGB(0x0077fe).CGColor;
+		//backView.layer.shadowOffset = CGSizeMake(0.0f, 1.0f);
+		//backView.layer.shadowRadius = 3.0f; backView.layer.shadowOpacity = 1.0f;
+		//backView.layer.shadowPath = [UIBezierPath bezierPathWithRect:backView.bounds].CGPath;
 
 #endif // end of READER_SHOW_SHADOWS Option
 
@@ -468,11 +640,13 @@
 
 	bookMark.frame = [self markRectInImageView]; // Position bookmark image
 
-	tintView.frame = imageView.bounds; backView.bounds = viewRect; backView.center = location;
+	tintView.frame = imageView.bounds;
+    backView.bounds = CGRectInset(viewRect, -6, -6);
+    backView.center = location;
 
 #if (READER_SHOW_SHADOWS == TRUE) // Option
 
-	backView.layer.shadowPath = [UIBezierPath bezierPathWithRect:backView.bounds].CGPath;
+	//backView.layer.shadowPath = [UIBezierPath bezierPathWithRect:backView.bounds].CGPath;
 
 #endif // end of READER_SHOW_SHADOWS Option
 }
@@ -487,18 +661,20 @@
 
 	bookMark.hidden = YES; bookMark.frame = [self markRectInImageView];
 
-	tintView.hidden = YES; tintView.frame = imageView.bounds; backView.frame = defaultRect;
-
+	tintView.hidden = YES;
+    tintView.frame = imageView.bounds;
+    backView.frame = CGRectInset(defaultRect, -6, -6);
+   
 #if (READER_SHOW_SHADOWS == TRUE) // Option
 
-	backView.layer.shadowPath = [UIBezierPath bezierPathWithRect:backView.bounds].CGPath;
+	//backView.layer.shadowPath = [UIBezierPath bezierPathWithRect:backView.bounds].CGPath;
 
 #endif // end of READER_SHOW_SHADOWS Option
 }
 
 - (void)showBookmark:(BOOL)show
 {
-	bookMark.hidden = (show ? NO : YES);
+    bookMark.hidden = YES;//(show ? NO : YES);
 }
 
 - (void)showTouched:(BOOL)touched
@@ -511,4 +687,8 @@
 	textLabel.text = text;
 }
 
+-(void)showBackView:(BOOL)show
+{
+    backView.hidden = !show;
+}
 @end

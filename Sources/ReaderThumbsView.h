@@ -39,7 +39,7 @@
 
 - (void)thumbsView:(ReaderThumbsView *)thumbsView updateThumbCell:(id)thumbCell forIndex:(NSInteger)index;
 
-- (void)thumbsView:(ReaderThumbsView *)thumbsView didSelectThumbWithIndex:(NSInteger)index;
+- (void)thumbsView:(ReaderThumbsView *)thumbsView updateThumbCell:(id)thumbCell currentThumbCell:(id)currCell didSelectThumbWithIndex:(NSInteger)index;
 
 @optional // Delegate protocols
 
@@ -51,7 +51,8 @@
 
 @interface ReaderThumbsView : UIScrollView
 
-@property (nonatomic, weak, readwrite) id <ReaderThumbsViewDelegate> delegate;
+@property (nonatomic, weak, readwrite) id <ReaderThumbsViewDelegate> thumbsDelegate;
+@property (nonatomic) NSInteger currentIndex;
 
 - (void)setThumbSize:(CGSize)thumbSize;
 

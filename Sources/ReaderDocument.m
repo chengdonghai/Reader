@@ -205,6 +205,8 @@
 
 			_bookmarks = [NSMutableIndexSet new]; // Bookmarked pages index set
 
+            _bookmarkDicts = [NSMutableDictionary new];//Bookmarked  time;
+            
 			CFURLRef docURLRef = (__bridge CFURLRef)[self fileURL]; // CFURLRef from NSURL
 
 			CGPDFDocumentRef thePDFDocRef = CGPDFDocumentCreateUsingUrl(docURLRef, _password);
@@ -317,6 +319,8 @@
 
 	[encoder encodeObject:_bookmarks forKey:@"Bookmarks"];
 
+    [encoder encodeObject:_bookmarkDicts forKey:@"BookmarkDicts"];
+    
 	[encoder encodeObject:_fileSize forKey:@"FileSize"];
 
 	[encoder encodeObject:_lastOpen forKey:@"LastOpen"];
@@ -335,7 +339,9 @@
 		_pageNumber = [decoder decodeObjectForKey:@"PageNumber"];
 
 		_bookmarks = [decoder decodeObjectForKey:@"Bookmarks"];
-
+        
+        _bookmarkDicts = [decoder decodeObjectForKey:@"BookmarkDicts"];
+        
 		_fileSize = [decoder decodeObjectForKey:@"FileSize"];
 
 		_lastOpen = [decoder decodeObjectForKey:@"LastOpen"];
@@ -346,6 +352,11 @@
 			_bookmarks = [_bookmarks mutableCopy];
 		else
 			_bookmarks = [NSMutableIndexSet new];
+        
+        if (_bookmarkDicts != nil)
+            _bookmarkDicts = [_bookmarkDicts mutableCopy];
+        else
+            _bookmarkDicts = [NSMutableDictionary new];
 	}
 
 	return self;

@@ -31,11 +31,16 @@
 #import "ReaderContentView.h"
 #import "ReaderThumbCache.h"
 #import "ReaderThumbQueue.h"
-
+#import "ReaderCustomPresentAnimaton.h"
+#import "ReaderCustomDismissAnimaton.h"
 #import <MessageUI/MessageUI.h>
 
 @interface ReaderViewController () <UIScrollViewDelegate, UIGestureRecognizerDelegate, MFMailComposeViewControllerDelegate, UIDocumentInteractionControllerDelegate,
-									ReaderMainToolbarDelegate, ReaderMainPagebarDelegate, ReaderContentViewDelegate, ThumbsViewControllerDelegate>
+									ReaderMainToolbarDelegate, ReaderMainPagebarDelegate, ReaderContentViewDelegate, ThumbsViewControllerDelegate,UIViewControllerTransitioningDelegate>
+
+@property(nonatomic,strong) ReaderCustomPresentAnimaton *presentAnimaton;
+@property(nonatomic,strong) ReaderCustomDismissAnimaton *dismissAnimaton;
+
 @end
 
 @implementation ReaderViewController
@@ -71,8 +76,8 @@
 
 #define STATUS_HEIGHT 20.0f
 
-#define TOOLBAR_HEIGHT 44.0f
-#define PAGEBAR_HEIGHT 48.0f
+#define TOOLBAR_HEIGHT 64.0f
+#define PAGEBAR_HEIGHT 55.0f
 
 #define SCROLLVIEW_OUTSET_SMALL 4.0f
 #define SCROLLVIEW_OUTSET_LARGE 8.0f
@@ -119,7 +124,7 @@
 	{
 		scrollView.contentOffset = contentOffset; // Update content offset
 	}
-
+ 
 	[mainToolbar setBookmarkState:[document.bookmarks containsIndex:page]];
 
 	[mainPagebar updatePagebar]; // Update page bar
@@ -248,7 +253,7 @@
 				if ([key integerValue] != page) [contentView zoomResetAnimated:NO];
 			}
 		];
-
+        
 		[mainToolbar setBookmarkState:[document.bookmarks containsIndex:page]];
 
 		[mainPagebar updatePagebar]; // Update page bar
@@ -305,6 +310,9 @@
 			[object updateDocumentProperties]; document = object; // Retain the supplied ReaderDocument object for our use
 
 			[ReaderThumbCache touchThumbCacheWithGUID:object.guid]; // Touch the document thumb cache directory
+            
+            self.presentAnimaton = [ReaderCustomPresentAnimaton new];
+            self.dismissAnimaton = [ReaderCustomDismissAnimaton new];
 		}
 		else // Invalid ReaderDocument object
 		{
@@ -330,21 +338,6 @@
 
 	UIView *fakeStatusBar = nil; CGRect viewRect = self.view.bounds; // View bounds
 
-	if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) // iOS 7+
-	{
-		if ([self prefersStatusBarHidden] == NO) // Visible status bar
-		{
-			CGRect statusBarRect = viewRect; statusBarRect.size.height = STATUS_HEIGHT;
-			fakeStatusBar = [[UIView alloc] initWithFrame:statusBarRect]; // UIView
-			fakeStatusBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-			fakeStatusBar.backgroundColor = [UIColor blackColor];
-			fakeStatusBar.contentMode = UIViewContentModeRedraw;
-			fakeStatusBar.userInteractionEnabled = NO;
-
-			viewRect.origin.y += STATUS_HEIGHT; viewRect.size.height -= STATUS_HEIGHT;
-		}
-	}
-
 	CGRect scrollViewRect = CGRectInset(viewRect, -scrollViewOutset, 0.0f);
 	theScrollView = [[UIScrollView alloc] initWithFrame:scrollViewRect]; // All
 	theScrollView.autoresizesSubviews = NO; theScrollView.contentMode = UIViewContentModeRedraw;
@@ -357,12 +350,14 @@
 	CGRect toolbarRect = viewRect; toolbarRect.size.height = TOOLBAR_HEIGHT;
 	mainToolbar = [[ReaderMainToolbar alloc] initWithFrame:toolbarRect document:document]; // ReaderMainToolbar
 	mainToolbar.delegate = self; // ReaderMainToolbarDelegate
+    mainToolbar.backgroundColor = PDFUIColorFromRGB(0xededef);
 	[self.view addSubview:mainToolbar];
 
 	CGRect pagebarRect = self.view.bounds; pagebarRect.size.height = PAGEBAR_HEIGHT;
 	pagebarRect.origin.y = (self.view.bounds.size.height - pagebarRect.size.height);
 	mainPagebar = [[ReaderMainPagebar alloc] initWithFrame:pagebarRect document:document]; // ReaderMainPagebar
 	mainPagebar.delegate = self; // ReaderMainPagebarDelegate
+    mainPagebar.backgroundColor = PDFUIColorFromRGB(0xededef);
 	[self.view addSubview:mainPagebar];
 
 	if (fakeStatusBar != nil) [self.view addSubview:fakeStatusBar]; // Add status bar background view
@@ -435,31 +430,31 @@
 	[super viewDidDisappear:animated];
 }
 
-- (void)viewDidUnload
-{
-#ifdef DEBUG
-	NSLog(@"%s", __FUNCTION__);
-#endif
-
-	mainToolbar = nil; mainPagebar = nil;
-
-	theScrollView = nil; contentViews = nil; lastHideTime = nil;
-
-	documentInteraction = nil; printInteraction = nil;
-
-	lastAppearSize = CGSizeZero; currentPage = 0;
-
-	[super viewDidUnload];
-}
+//- (void)viewDidUnload
+//{
+//#ifdef DEBUG
+//	NSLog(@"%s", __FUNCTION__);
+//#endif
+//
+//	mainToolbar = nil; mainPagebar = nil;
+//
+//	theScrollView = nil; contentViews = nil; lastHideTime = nil;
+//
+//	documentInteraction = nil; printInteraction = nil;
+//
+//	lastAppearSize = CGSizeZero; currentPage = 0;
+//
+//	[super viewDidUnload];
+//}
 
 - (BOOL)prefersStatusBarHidden
 {
-	return YES;
+	return NO;
 }
 
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
-	return UIStatusBarStyleLightContent;
+	return UIStatusBarStyleDefault;
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
@@ -836,10 +831,12 @@
 	if ([document.bookmarks containsIndex:currentPage]) // Remove bookmark
 	{
 		[document.bookmarks removeIndex:currentPage]; [mainToolbar setBookmarkState:NO];
+        [document.bookmarkDicts removeObjectForKey:@(currentPage)];
 	}
 	else // Add the bookmarked page number to the bookmark index set
 	{
 		[document.bookmarks addIndex:currentPage]; [mainToolbar setBookmarkState:YES];
+        [document.bookmarkDicts setObject:[NSDate date] forKey:@(currentPage)];
 	}
 
 #endif // end of READER_BOOKMARKS Option
@@ -867,20 +864,21 @@
 
 - (void)thumbsViewController:(ThumbsViewController *)viewController gotoPage:(NSInteger)page
 {
-#if (READER_ENABLE_THUMBS == TRUE) // Option
-
 	[self showDocumentPage:page];
-
-#endif // end of READER_ENABLE_THUMBS Option
 }
-
+-(void)thumbsViewController:(ThumbsViewController *)viewController deleteBookmark:(NSNumber *)page
+{
+    if ([document.bookmarks containsIndex:page.integerValue]) // Remove bookmark
+    {
+        [document.bookmarks removeIndex:page.integerValue];
+        //[mainToolbar setBookmarkState:NO];
+        [document.bookmarkDicts removeObjectForKey:page];
+        [mainToolbar setBookmarkState:NO];
+    }
+}
 - (void)dismissThumbsViewController:(ThumbsViewController *)viewController
 {
-#if (READER_ENABLE_THUMBS == TRUE) // Option
-
-	[self dismissViewControllerAnimated:NO completion:NULL];
-
-#endif // end of READER_ENABLE_THUMBS Option
+	[self dismissViewControllerAnimated:YES completion:NULL];
 }
 
 #pragma mark - ReaderMainPagebarDelegate methods
@@ -889,7 +887,26 @@
 {
 	[self showDocumentPage:page];
 }
+-(void)pagebarShowMenu:(ReaderMainPagebar *)pagebar
+{
+    ThumbsViewController *thumbsViewController = [[ThumbsViewController alloc] initWithReaderDocument:document];
+    thumbsViewController.title = self.title;
+    thumbsViewController.delegate = self;
+    thumbsViewController.transitioningDelegate = self;
 
+    [self presentViewController:thumbsViewController animated:YES completion:NULL];
+
+}
+
+#pragma mark - UIViewControllerTransitioningDelegate
+
+-(id<UIViewControllerAnimatedTransitioning>)animationControllerForPresentedController:(UIViewController *)presented presentingController:(UIViewController *)presenting sourceController:(UIViewController *)source
+{
+    return self.presentAnimaton;
+}
+-(id<UIViewControllerAnimatedTransitioning>)animationControllerForDismissedController:(UIViewController *)dismissed{
+    return self.dismissAnimaton;
+}
 #pragma mark - UIApplication notification methods
 
 - (void)applicationWillResign:(NSNotification *)notification

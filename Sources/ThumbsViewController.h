@@ -27,6 +27,7 @@
 
 #import "ThumbsMainToolbar.h"
 #import "ReaderThumbsView.h"
+#define PDFUIColorFromRGB(rgbValue) [UIColor colorWithRed:((float)((rgbValue & 0xFF0000) >> 16))/255.0 green:((float)((rgbValue & 0xFF00) >> 8))/255.0 blue:((float)(rgbValue & 0xFF))/255.0 alpha:1.0]
 
 @class ReaderDocument;
 @class ThumbsViewController;
@@ -36,6 +37,8 @@
 @required // Delegate protocols
 
 - (void)thumbsViewController:(ThumbsViewController *)viewController gotoPage:(NSInteger)page;
+
+- (void)thumbsViewController:(ThumbsViewController *)viewController deleteBookmark:(NSNumber*)page;
 
 - (void)dismissThumbsViewController:(ThumbsViewController *)viewController;
 
@@ -62,5 +65,7 @@
 - (void)showText:(NSString *)text;
 
 - (void)showBookmark:(BOOL)show;
+
+-(void)showBackView:(BOOL)show;
 
 @end
