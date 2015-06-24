@@ -114,6 +114,7 @@
     _scrollView.pagingEnabled = YES;
     _scrollView.showsHorizontalScrollIndicator = NO;
     _scrollView.showsVerticalScrollIndicator = NO;
+    _scrollView.delegate = self;
     [_scrollView setContentSize:CGSizeMake(_scrollView.frame.size.width * 2, _scrollView.frame.size.height)];
     
     [self.view addSubview:_scrollView];
@@ -189,7 +190,31 @@
     return tableHeaderView;
 }
 
+#pragma mark - UIScrollViewDelegate
 
+-(void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
+{
+    if(scrollView == _scrollView) {
+        NSInteger index =  floor(scrollView.contentOffset.x / scrollView.frame.size.width);
+        
+        if (index < 0 || index > 1) {
+            return;
+        }
+        
+        if (self.segmentedControl.selectedSegmentIndex == index) {
+            return;
+        }
+        
+        [self.segmentedControl setSelectedSegmentIndex:index];
+        
+        if (index == 0) {
+            //[self showDirectoryList];
+        } else {
+            [self reloadBookmarkTable];;
+        }
+    }
+    
+}
 #pragma mark - UIViewControllerTransitioningDelegate
 
 #pragma mark - Action

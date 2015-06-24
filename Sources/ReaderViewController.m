@@ -289,6 +289,10 @@
 	}
 }
 
+-(ReaderDocument *)readDocment
+{
+    return document;
+}
 #pragma mark - UIViewController methods
 
 - (instancetype)initWithReaderDocument:(ReaderDocument *)object
@@ -394,6 +398,8 @@
 
 		lastAppearSize = CGSizeZero; // Reset view size tracking
 	}
+    self.navigationController.navigationBarHidden = YES;
+
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -404,6 +410,7 @@
 	{
 		[self performSelector:@selector(showDocument) withObject:nil afterDelay:0.0];
 	}
+    self.navigationController.navigationBarHidden = YES;
 
 #if (READER_DISABLE_IDLE == TRUE) // Option
 
@@ -415,7 +422,9 @@
 - (void)viewWillDisappear:(BOOL)animated
 {
 	[super viewWillDisappear:animated];
-
+    
+    self.navigationController.navigationBarHidden = NO;
+    
 	lastAppearSize = self.view.bounds.size; // Track view size
 
 #if (READER_DISABLE_IDLE == TRUE) // Option
@@ -451,7 +460,6 @@
 {
 	return NO;
 }
-
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
 	return UIStatusBarStyleDefault;
