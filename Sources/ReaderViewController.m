@@ -357,6 +357,7 @@
 	mainToolbar = [[ReaderMainToolbar alloc] initWithFrame:toolbarRect document:document]; // ReaderMainToolbar
 	mainToolbar.delegate = self; // ReaderMainToolbarDelegate
     mainToolbar.backgroundColor = PDFUIColorFromRGB(0xededef);
+    [mainToolbar hideToolbar];
 	[self.view addSubview:mainToolbar];
 
 	CGRect pagebarRect = self.view.bounds; pagebarRect.size.height = PAGEBAR_HEIGHT;
@@ -364,6 +365,8 @@
 	mainPagebar = [[ReaderMainPagebar alloc] initWithFrame:pagebarRect document:document]; // ReaderMainPagebar
 	mainPagebar.delegate = self; // ReaderMainPagebarDelegate
     mainPagebar.backgroundColor = PDFUIColorFromRGB(0xededef);
+    [mainPagebar hidePagebar];
+    
 	[self.view addSubview:mainPagebar];
 
 	if (fakeStatusBar != nil) [self.view addSubview:fakeStatusBar]; // Add status bar background view
@@ -401,7 +404,7 @@
 		lastAppearSize = CGSizeZero; // Reset view size tracking
 	}
     self.navigationController.navigationBarHidden = YES;
-
+    statusBarHidden = YES;
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -413,7 +416,7 @@
 		[self performSelector:@selector(showDocument) withObject:nil afterDelay:0.0];
 	}
     self.navigationController.navigationBarHidden = YES;
-
+    statusBarHidden = YES;
 #if (READER_DISABLE_IDLE == TRUE) // Option
 
 	[UIApplication sharedApplication].idleTimerDisabled = YES;
@@ -595,7 +598,9 @@
 				{
 					if ((mainToolbar.alpha < 1.0f) || (mainPagebar.alpha < 1.0f)) // Hidden
 					{
-						[mainToolbar showToolbar]; [mainPagebar showPagebar]; // Show
+						[mainToolbar showToolbar];
+                        [mainPagebar showPagebar]; // Show
+                        [self showStatusBar];
 					}
 				}
 			}
@@ -690,8 +695,9 @@
 			if (CGRectContainsPoint(areaRect, point) == false) return;
 		}
 
-		[mainToolbar hideToolbar]; [mainPagebar hidePagebar]; // Hide
-
+		[mainToolbar hideToolbar];
+        [mainPagebar hidePagebar]; // Hide
+        [self hideStatusBar];
 		lastHideTime = [NSDate date]; // Set last hide time
 	}
 }
@@ -835,13 +841,14 @@
 #endif // end of READER_BOOKMARKS Option
 }
 
--(void)tappedInToolbar:(ReaderMainToolbar *)toolbar showBar:(UIButton *)button
+#pragma mark - StatusBar show and hide
+-(void)showStatusBar
 {
     statusBarHidden = NO;
     [self setNeedsStatusBarAppearanceUpdate];
 }
 
--(void)tappedInToolbar:(ReaderMainToolbar *)toolbar hiddenBar:(UIButton *)button
+-(void)hideStatusBar
 {
     statusBarHidden = YES;
     [self setNeedsStatusBarAppearanceUpdate];

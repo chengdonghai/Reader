@@ -231,7 +231,6 @@
 {
 	if (self.hidden == NO)
 	{
-        [delegate tappedInToolbar:self hiddenBar:nil];
 		[UIView animateWithDuration:0.25 delay:0.0
 			options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowUserInteraction
 			animations:^(void)
@@ -250,7 +249,6 @@
 {
 	if (self.hidden == YES)
 	{
-        [delegate tappedInToolbar:self showBar:nil];
 		[self updateBookmarkImage]; // First
 
 		[UIView animateWithDuration:0.25 delay:0.0
