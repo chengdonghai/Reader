@@ -70,6 +70,8 @@
 	NSDate *lastHideTime;
 
 	BOOL ignoreDidScroll;
+    
+    BOOL statusBarHidden;
 }
 
 #pragma mark - Constants
@@ -439,26 +441,9 @@
 	[super viewDidDisappear:animated];
 }
 
-//- (void)viewDidUnload
-//{
-//#ifdef DEBUG
-//	NSLog(@"%s", __FUNCTION__);
-//#endif
-//
-//	mainToolbar = nil; mainPagebar = nil;
-//
-//	theScrollView = nil; contentViews = nil; lastHideTime = nil;
-//
-//	documentInteraction = nil; printInteraction = nil;
-//
-//	lastAppearSize = CGSizeZero; currentPage = 0;
-//
-//	[super viewDidUnload];
-//}
-
 - (BOOL)prefersStatusBarHidden
 {
-	return NO;
+	return statusBarHidden;
 }
 - (UIStatusBarStyle)preferredStatusBarStyle
 {
@@ -848,6 +833,18 @@
 	}
 
 #endif // end of READER_BOOKMARKS Option
+}
+
+-(void)tappedInToolbar:(ReaderMainToolbar *)toolbar showBar:(UIButton *)button
+{
+    statusBarHidden = NO;
+    [self setNeedsStatusBarAppearanceUpdate];
+}
+
+-(void)tappedInToolbar:(ReaderMainToolbar *)toolbar hiddenBar:(UIButton *)button
+{
+    statusBarHidden = YES;
+    [self setNeedsStatusBarAppearanceUpdate];
 }
 
 #pragma mark - MFMailComposeViewControllerDelegate methods

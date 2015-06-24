@@ -34,6 +34,9 @@
 
 @required // Delegate protocols
 
+- (void)tappedInToolbar:(ReaderMainToolbar *)toolbar hiddenBar:(UIButton *)button;
+- (void)tappedInToolbar:(ReaderMainToolbar *)toolbar showBar:(UIButton *)button;
+
 - (void)tappedInToolbar:(ReaderMainToolbar *)toolbar doneButton:(UIButton *)button;
 - (void)tappedInToolbar:(ReaderMainToolbar *)toolbar thumbsButton:(UIButton *)button;
 - (void)tappedInToolbar:(ReaderMainToolbar *)toolbar exportButton:(UIButton *)button;
