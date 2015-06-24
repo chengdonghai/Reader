@@ -337,7 +337,11 @@
 - (void)viewDidLoad
 {
 	[super viewDidLoad];
-
+    
+    [self setAutomaticallyAdjustsScrollViewInsets:NO];
+    
+    [self hideStatusBar];
+    
 	assert(document != nil); // Must have a valid ReaderDocument
 
 	self.view.backgroundColor = [UIColor grayColor]; // Neutral gray
@@ -404,7 +408,6 @@
 		lastAppearSize = CGSizeZero; // Reset view size tracking
 	}
     self.navigationController.navigationBarHidden = YES;
-    statusBarHidden = YES;
 }
 
 - (void)viewDidAppear:(BOOL)animated
@@ -416,7 +419,6 @@
 		[self performSelector:@selector(showDocument) withObject:nil afterDelay:0.0];
 	}
     self.navigationController.navigationBarHidden = YES;
-    statusBarHidden = YES;
 #if (READER_DISABLE_IDLE == TRUE) // Option
 
 	[UIApplication sharedApplication].idleTimerDisabled = YES;
