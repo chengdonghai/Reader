@@ -49,7 +49,7 @@
 
 - (void)updatePagebar;
 
-- (void)hidePagebar;
+- (void)hidePagebar:(BOOL)animated;
 - (void)showPagebar;
 
 @end

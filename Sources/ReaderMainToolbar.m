@@ -227,22 +227,30 @@
 #endif // end of READER_BOOKMARKS Option
 }
 
-- (void)hideToolbar
+- (void)hideToolbar:(BOOL)animated
 {
-	if (self.hidden == NO)
-	{
-		[UIView animateWithDuration:0.25 delay:0.0
-			options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowUserInteraction
-			animations:^(void)
-			{
-				self.alpha = 0.0f;
-			}
-			completion:^(BOOL finished)
-			{
-				self.hidden = YES;
-			}
-		];
-	}
+    if(animated) {
+        if (self.hidden == NO)
+        {
+            [UIView animateWithDuration:0.25 delay:0.0
+                                options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowUserInteraction
+                             animations:^(void)
+             {
+                 self.alpha = 0.0f;
+             }
+                             completion:^(BOOL finished)
+             {
+                 self.hidden = YES;
+             }
+             ];
+        }
+    } else {
+        if (self.hidden == NO) {
+            self.alpha = 0.0f;
+            self.hidden = YES;
+        }
+    }
+	
 }
 
 - (void)showToolbar

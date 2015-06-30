@@ -361,7 +361,7 @@
 	mainToolbar = [[ReaderMainToolbar alloc] initWithFrame:toolbarRect document:document]; // ReaderMainToolbar
 	mainToolbar.delegate = self; // ReaderMainToolbarDelegate
     mainToolbar.backgroundColor = PDFUIColorFromRGB(0xededef);
-    [mainToolbar hideToolbar];
+    [mainToolbar hideToolbar:NO];
 	[self.view addSubview:mainToolbar];
 
 	CGRect pagebarRect = self.view.bounds; pagebarRect.size.height = PAGEBAR_HEIGHT;
@@ -369,7 +369,7 @@
 	mainPagebar = [[ReaderMainPagebar alloc] initWithFrame:pagebarRect document:document]; // ReaderMainPagebar
 	mainPagebar.delegate = self; // ReaderMainPagebarDelegate
     mainPagebar.backgroundColor = PDFUIColorFromRGB(0xededef);
-    [mainPagebar hidePagebar];
+    [mainPagebar hidePagebar:NO];
     
 	[self.view addSubview:mainPagebar];
 
@@ -697,8 +697,8 @@
 			if (CGRectContainsPoint(areaRect, point) == false) return;
 		}
 
-		[mainToolbar hideToolbar];
-        [mainPagebar hidePagebar]; // Hide
+		[mainToolbar hideToolbar:YES];
+        [mainPagebar hidePagebar:YES]; // Hide
         [self hideStatusBar];
 		lastHideTime = [NSDate date]; // Set last hide time
 	}
@@ -709,7 +709,8 @@
 - (void)tappedInToolbar:(ReaderMainToolbar *)toolbar doneButton:(UIButton *)button
 {
 #if (READER_STANDALONE == FALSE) // Option
-
+    [mainToolbar hideToolbar:NO];
+    [mainPagebar hidePagebar:NO];
 	[self closeDocument]; // Close ReaderViewController
 
 #endif // end of READER_STANDALONE Option

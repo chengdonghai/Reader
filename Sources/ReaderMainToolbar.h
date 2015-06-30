@@ -51,7 +51,7 @@
 
 - (void)setBookmarkState:(BOOL)state;
 
-- (void)hideToolbar;
+- (void)hideToolbar:(BOOL)animated;
 - (void)showToolbar;
 
 @end

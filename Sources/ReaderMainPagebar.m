@@ -424,22 +424,30 @@
 	}
 }
 
-- (void)hidePagebar
+- (void)hidePagebar:(BOOL)animated
 {
-	if (self.hidden == NO) // Only if visible
-	{
-		[UIView animateWithDuration:0.25 delay:0.0
-			options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowUserInteraction
-			animations:^(void)
-			{
-				self.alpha = 0.0f;
-			}
-			completion:^(BOOL finished)
-			{
-				self.hidden = YES;
-			}
-		];
-	}
+    if (animated) {
+        if (self.hidden == NO) // Only if visible
+        {
+            [UIView animateWithDuration:0.25 delay:0.0
+                                options:UIViewAnimationOptionCurveLinear | UIViewAnimationOptionAllowUserInteraction
+                             animations:^(void)
+             {
+                 self.alpha = 0.0f;
+             }
+                             completion:^(BOOL finished)
+             {
+                 self.hidden = YES;
+             }
+             ];
+        }
+    } else {
+        if (self.hidden == NO) {
+            self.alpha = 0.0f;
+            self.hidden = YES;
+        }
+    }
+	
 }
 
 - (void)showPagebar
