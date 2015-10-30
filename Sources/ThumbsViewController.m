@@ -34,7 +34,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import "BookmarkShowModel.h"
 
-@interface ThumbsViewController () <ThumbsMainToolbarDelegate, ReaderThumbsViewDelegate,UITableViewDataSource,UITableViewDelegate,UIViewControllerTransitioningDelegate>
+@interface ThumbsViewController () <ThumbsMainToolbarDelegate, ReaderThumbsViewDelegate,UITableViewDataSource,UITableViewDelegate,UIViewControllerTransitioningDelegate,UIGestureRecognizerDelegate>
 
 @property(nonatomic,strong) UISegmentedControl *segmentedControl;
 
@@ -59,6 +59,7 @@
     UIScrollView *_scrollView;
     UITableView *_bookmarkTableView;
     UIImageView *_nobookmarkImageView;
+    
 }
 
 #pragma mark - Constants
@@ -115,6 +116,10 @@
     _scrollView.showsHorizontalScrollIndicator = NO;
     _scrollView.showsVerticalScrollIndicator = NO;
     _scrollView.delegate = self;
+    _scrollView.bounces = NO;
+    _scrollView.alwaysBounceVertical = NO;
+     _scrollView.delaysContentTouches = NO;
+    //_scrollView.canCancelContentTouches = NO;
     [_scrollView setContentSize:CGSizeMake(_scrollView.frame.size.width * 2, _scrollView.frame.size.height)];
     
     [self.view addSubview:_scrollView];
@@ -145,6 +150,7 @@
     [_scrollView addSubview:_bookmarkTableView];
     [_bookmarkTableView reloadData];
     
+    
     CGFloat backImageViewWidth = 33;
     CGFloat backImageViewHeight = 66;
     
@@ -168,7 +174,6 @@
     [delegate dismissThumbsViewController:self];
 }
 
-
 -(UIView *)createSegmentView
 {
     UIView *tableHeaderView = [[UIView alloc] initWithFrame:CGRectMake(0, 20, self.view.frame.size.width, SEGMENT_CONTROL_HEIGHT)];
@@ -189,9 +194,35 @@
     
     return tableHeaderView;
 }
+#pragma mark -UIPanGestureAction
+-(BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    return YES;
+}
+
+-(BOOL)gestureRecognizer:(UIGestureRecognizer *)gestureRecognizer shouldRequireFailureOfGestureRecognizer:(UIGestureRecognizer *)otherGestureRecognizer
+{
+    return NO;
+}
 
 #pragma mark - UIScrollViewDelegate
+-(void)scrollViewWillEndDragging:(UIScrollView *)scrollView withVelocity:(CGPoint)velocity targetContentOffset:(inout CGPoint *)targetContentOffset
+{
+    if(scrollView == _scrollView){
+        CGFloat offsetX = _scrollView.contentOffset.x;
 
+        if (offsetX >= scrollView.frame.size.width) {
+            [_scrollView setScrollEnabled:NO];
+        } else {
+            [_scrollView setScrollEnabled:YES];
+        }
+        
+    }
+}
+-(void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    [_scrollView setScrollEnabled:YES];
+}
 -(void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
 {
     if(scrollView == _scrollView) {
